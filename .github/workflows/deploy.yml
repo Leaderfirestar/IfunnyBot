@@ -1,4 +1,4 @@
-name: Deploy to Self-Hosted Server
+name: Deploy to Hetzner
 
 on:
   push:
@@ -17,12 +17,16 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/youruser/your-repo
+            cd /home/youruser/your-project
 
+            # Overwrite .env with the new token
             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
 
+            # Pull the latest changes
             git pull origin master
+
+            # Install/update Python dependencies
             pip install -r requirements.txt
 
-            # Restart the bot with PM2 (first time use 'start' instead of 'restart')
-            pm2 restart meme-bot || pm2 start bot.py --interpreter python3 --name meme-bot --env production
+            # Start or restart using PM2 + config
+            pm2 startOrRestart ecosystem.config.json
