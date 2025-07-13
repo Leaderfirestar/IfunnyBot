@@ -1,0 +1,28 @@
+name: Deploy to Self-Hosted Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/youruser/your-repo
+
+            echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+
+            git pull origin master
+            pip install -r requirements.txt
+
+            # Restart the bot with PM2 (first time use 'start' instead of 'restart')
+            pm2 restart meme-bot || pm2 start bot.py --interpreter python3 --name meme-bot --env production
