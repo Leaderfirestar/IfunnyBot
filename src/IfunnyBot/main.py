@@ -9,7 +9,7 @@ load_dotenv()
 
 class MyClient(discord.Client):
     async def on_ready(self):
-        print(f"Logged on as {self.user}!")
+        print(f"{self.user} online")
 
     async def on_message(self, message):
         if message.author == self.user:
