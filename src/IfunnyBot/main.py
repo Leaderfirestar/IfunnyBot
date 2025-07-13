@@ -38,6 +38,7 @@ class MyClient(discord.Client):
                     html = await response.text()
                     soup = BeautifulSoup(html, "html.parser")
 
+                    # Their cdn url is in the meta tags
                     image_tag = soup.find("meta", property="og:image")
                     video_tag = soup.find("meta", property="og:video:secure_url")
 
