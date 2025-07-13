@@ -28,5 +28,5 @@ jobs:
             # Install/update Python dependencies
             pip install -r requirements.txt
 
-            # Start or restart using PM2 + config
-            pm2 startOrRestart ecosystem.config.json
+            # Start or reload using PM2 + config
+            pm2 startOrReload ecosystem.config.json
