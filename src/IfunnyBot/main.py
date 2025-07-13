@@ -19,7 +19,7 @@ class MyClient(discord.Client):
         # get the Ifunny link from the message
         ifunny_link = message.content.split("Tap to see the meme -")[1].strip()
         
-        # go to the link and get the meme (could be image or video)
+        # go to the link and get the meme (could be image or video). Headers to bypass sloppy bot checks
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
