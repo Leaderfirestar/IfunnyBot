@@ -1,0 +1,9 @@
+{
+    "apps": [
+        {
+            "name": "ifunny-bot",
+            "script": "src/IfunnyBot/main.py",
+            "interpreter": "python3"
+        }
+    ]
+}
