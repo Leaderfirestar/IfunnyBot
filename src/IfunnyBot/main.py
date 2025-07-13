@@ -1,8 +1,8 @@
 import discord
 import aiohttp
 from bs4 import BeautifulSoup
-import io
 from dotenv import load_dotenv
+import io
 import os
 
 load_dotenv()
