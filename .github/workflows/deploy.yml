@@ -19,8 +19,6 @@ jobs:
           script: |
             cd IfunnyBot
 
-            echo "$PWD"
-            whoami
             whereis python
             whereis pm2
 
