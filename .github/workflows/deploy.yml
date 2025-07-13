@@ -28,7 +28,7 @@ jobs:
             # Install/update Python dependencies
             rm -rf venv
             /home/leaderfirestar/.pyenv/shims/python -m venv venv
-            source /home/leaderfirestar/IfunnyBot/venv/bin/venv/bin/activate
+            source /home/leaderfirestar/IfunnyBot/venv/bin/activate
             /home/leaderfirestar/IfunnyBot/venv/bin/pip install --upgrade pip
             /home/leaderfirestar/IfunnyBot/venv/bin/pip install -r requirements.txt
 
