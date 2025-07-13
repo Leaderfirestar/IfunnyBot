@@ -17,21 +17,23 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd IfunnyBot
+            bash -lc '
+                cd IfunnyBot
 
-            # Overwrite .env with the new token
-            echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+                # Overwrite .env with the new token
+                echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
 
-            # Pull the latest changes
-            git pull origin master
+                # Pull the latest changes
+                git pull origin master
 
-            # Install/update Python dependencies
-            rm -rf venv
-            python -m venv venv
-            source venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
+                # Install/update Python dependencies
+                rm -rf venv
+                python -m venv venv
+                source venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
 
-            # Start or reload using PM2 + config
-            export PATH="$HOME/.npm-global/bin:$PATH"
-            pm2 startOrReload ecosystem.config.json
+                # Start or reload using PM2 + config
+                export PATH="$HOME/.npm-global/bin:$PATH"
+                pm2 startOrReload ecosystem.config.json
+            '
