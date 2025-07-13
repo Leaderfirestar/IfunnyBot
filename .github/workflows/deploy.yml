@@ -19,9 +19,6 @@ jobs:
           script: |
             cd IfunnyBot
 
-            whereis python
-            whereis pm2
-
             # Overwrite .env with the new token
             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
 
@@ -30,11 +27,10 @@ jobs:
 
             # Install/update Python dependencies
             rm -rf venv
-            python -m venv venv
+            /home/leaderfirestar/.pyenv/shims/python -m venv venv
             source venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
+            /home/leaderfirestar/.pyenv/shims/pip install --upgrade pip
+            /home/leaderfirestar/.pyenv/shims/pip install -r requirements.txt
 
             # Start or reload using PM2 + config
-            export PATH="$HOME/.npm-global/bin:$PATH"
-            pm2 startOrReload ecosystem.config.json
+            /home/leaderfirestar/.nvm/versions/node/v22.16.0/bin/pm2 startOrReload ecosystem.config.json
