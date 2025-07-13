@@ -26,7 +26,12 @@ jobs:
             git pull origin master
 
             # Install/update Python dependencies
+            rm -rf venv
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
             pip install -r requirements.txt
 
             # Start or reload using PM2 + config
+            export PATH="$HOME/.npm-global/bin:$PATH"
             pm2 startOrReload ecosystem.config.json
