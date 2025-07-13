@@ -17,7 +17,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/youruser/your-project
+            cd IfunnyBot
 
             # Overwrite .env with the new token
             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
