@@ -21,6 +21,7 @@ jobs:
 
             echo "$PWD"
             whoami
+            python --version
 
             # Overwrite .env with the new token
             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
