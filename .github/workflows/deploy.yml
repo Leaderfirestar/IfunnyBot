@@ -19,6 +19,9 @@ jobs:
           script: |
             cd IfunnyBot
 
+            echo "$PWD"
+            echo whoami
+
             # Overwrite .env with the new token
             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
 
