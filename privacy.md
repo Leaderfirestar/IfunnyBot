@@ -1,7 +1,3 @@
----
-title: Privacy Policy
----
-
 # Privacy Policy
 
 Effective Date: July 13, 2025
