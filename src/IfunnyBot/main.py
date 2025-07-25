@@ -62,16 +62,16 @@ class MyClient(discord.Client):
                     if not media_url:
                         await message.channel.send("Could not find meme in the link.")
                         return
-                    
-                    size = int(response.headers.get("Content-Length", 0))
-                    if size > MAX_DISCORD_FILE_SIZE:
-                        await message.channel.send(media_url)
-                        return
 
                     # Fetch the media itself
                     async with session.get(media_url) as media_response:
                         if media_response.status != 200:
                             await message.channel.send("Failed to download meme.")
+                            return
+                        
+                        size = int(media_response.headers.get("Content-Length", 0))
+                        if size > MAX_DISCORD_FILE_SIZE:
+                            await message.channel.send(media_url)
                             return
 
                         media_bytes = await media_response.read()
