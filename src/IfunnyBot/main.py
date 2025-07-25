@@ -1,7 +1,9 @@
+from email.mime import message
 import discord
 import aiohttp
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 import io
 import os
 
@@ -18,6 +20,13 @@ class MyClient(discord.Client):
             return
         # get the Ifunny link from the message
         ifunny_link = message.content.split("Tap to see the meme -")[1].strip()
+
+        parsed_url = urlparse(ifunny_link)
+        domain = parsed_url.netloc.lower()
+
+        if not domain.endswith("ifunny.co"):
+            await message.channel.send("⚠️ Invalid link source. Only ifunny.co links are allowed.")
+            return
         
         # go to the link and get the meme (could be image or video). Headers to bypass sloppy bot checks
         headers = {
