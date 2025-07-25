@@ -1,0 +1,28 @@
+{
+  "name": "ifunnybot",
+  "version": "1.0.0",
+  "description": "A lightweight, no-tracking Discord bot that returns memes from iFunny on demand.",
+  "main": "index.js",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Leaderfirestar/IfunnyBot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Leaderfirestar/IfunnyBot/issues"
+  },
+  "homepage": "https://github.com/Leaderfirestar/IfunnyBot#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^9.1.7"
+  }
+}
