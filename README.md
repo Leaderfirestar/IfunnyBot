@@ -50,6 +50,7 @@ cd IfunnyBot
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+npm install
 
 # Create .env file with your Discord token
 echo "TOKEN=your_discord_token" > .env
