@@ -37,6 +37,8 @@ class MyClient(discord.Client):
             "Connection": "keep-alive",
         }
 
+        MAX_DISCORD_FILE_SIZE = 8 * 1024 * 1024  # 8 MB
+
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
                 async with session.get(ifunny_link) as response:
@@ -59,6 +61,11 @@ class MyClient(discord.Client):
 
                     if not media_url:
                         await message.channel.send("Could not find meme in the link.")
+                        return
+                    
+                    size = int(response.headers.get("Content-Length", 0))
+                    if size > MAX_DISCORD_FILE_SIZE:
+                        await message.channel.send(media_url)
                         return
 
                     # Fetch the media itself
