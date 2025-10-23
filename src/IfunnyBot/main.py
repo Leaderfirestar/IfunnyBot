@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from collections.abc import Callable
 from urllib.parse import parse_qs, urljoin, urlparse, urlsplit, urlunparse
 from yarl import URL
+from yarl import URL
 
 IFUNNY_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -38,6 +39,11 @@ INSTAGRAM_GRAPHQL_APP_ID = "936619743392459"
 
 MAX_DISCORD_FILE_SIZE = 8 * 1024 * 1024  # 8 MB
 URL_REGEX = re.compile(r"https?://\S+")
+LSD_PATTERNS = [
+    re.compile(r'"LSD",\[\],{"token":"([^"]+)'),
+    re.compile(r'"LSD":{"token":"([^"]+)'),
+    re.compile(r'"lsd",\[\],{"token":"([^"]+)'),
+]
 
 load_dotenv()
 
@@ -206,7 +212,7 @@ def _media_from_graph_node(node: dict) -> ResolvedMedia | None:
 
 
 async def _resolve_instagram_via_graphql(
-    session: aiohttp.ClientSession, instagram_link: str
+    session: aiohttp.ClientSession, instagram_link: str, lsd_token: str | None
 ) -> list[ResolvedMedia]:
     shortcode, canonical_path, query_params = _extract_instagram_shortcode(instagram_link)
 
@@ -237,6 +243,8 @@ async def _resolve_instagram_via_graphql(
         graphql_headers["X-CSRFToken"] = csrf_cookie.value
     if lsd_cookie:
         graphql_headers["X-FB-LSD"] = lsd_cookie.value
+    elif lsd_token:
+        graphql_headers["X-FB-LSD"] = lsd_token
 
     params = {
         "doc_id": INSTAGRAM_GRAPHQL_DOC_ID,
@@ -312,11 +320,18 @@ async def resolve_instagram_media(instagram_link: str) -> list[ResolvedMedia]:
 
         soup = BeautifulSoup(html, "html.parser")
         media_items = extract_instagram_media_from_meta(soup)
+        lsd_token = None
 
         if media_items and not (query_params.get("img_index") or query_params.get("img_index[]")):
             return media_items
 
-        return await _resolve_instagram_via_graphql(session, instagram_link)
+        for pattern in LSD_PATTERNS:
+            match = pattern.search(html)
+            if match:
+                lsd_token = match.group(1)
+                break
+
+        return await _resolve_instagram_via_graphql(session, instagram_link, lsd_token)
 
 
 def extract_first_matching_url(
