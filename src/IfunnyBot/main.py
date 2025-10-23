@@ -12,7 +12,8 @@ import discord
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from collections.abc import Callable
-from urllib.parse import urljoin, urlparse, urlsplit, urlunparse
+from urllib.parse import parse_qs, urljoin, urlparse, urlsplit, urlunparse
+from yarl import URL
 
 IFUNNY_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -42,9 +43,9 @@ load_dotenv()
 
 
 @dataclass
-class InstagramMedia:
+class ResolvedMedia:
     url: str
-    is_video: bool
+    is_video: bool | None = None
 
 
 def is_ifunny_link(url: str) -> bool:
@@ -159,35 +160,55 @@ def _collect_meta(soup: BeautifulSoup) -> dict[str, str]:
     return meta
 
 
-def extract_instagram_media_from_meta(soup: BeautifulSoup) -> InstagramMedia | None:
+def extract_instagram_media_from_meta(soup: BeautifulSoup) -> list[ResolvedMedia]:
     meta = _collect_meta(soup)
 
     for key in ("og:video:secure_url", "og:video:url", "og:video"):
         candidate = meta.get(key)
         if candidate:
-            return InstagramMedia(url=candidate, is_video=True)
+            return [ResolvedMedia(url=candidate, is_video=True)]
 
     image = meta.get("og:image")
     if image:
-        return InstagramMedia(url=image, is_video=False)
+        return [ResolvedMedia(url=image, is_video=False)]
 
-    return None
+    return []
 
 
-def _extract_instagram_shortcode(instagram_link: str) -> tuple[str, str]:
+def _extract_instagram_shortcode(instagram_link: str) -> tuple[str, str, dict[str, list[str]]]:
     parsed = urlparse(instagram_link)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
     if len(path_segments) < 2:
         raise ValueError("Unrecognized Instagram URL format; expected /<type>/<shortcode>/")
     shortcode = path_segments[1]
     canonical_path = "/".join(path_segments[:2]) + "/"
-    return shortcode, canonical_path
+    query_params = parse_qs(parsed.query)
+    return shortcode, canonical_path, query_params
+
+
+def _media_from_graph_node(node: dict) -> ResolvedMedia | None:
+    if node.get("is_video") and node.get("video_url"):
+        return ResolvedMedia(url=node["video_url"], is_video=True)
+
+    if node.get("is_video") and node.get("video_resources"):
+        resources = node["video_resources"]
+        if isinstance(resources, list) and resources:
+            best = max(resources, key=lambda r: r.get("width", 0))
+            src = best.get("src")
+            if src:
+                return ResolvedMedia(url=src, is_video=True)
+
+    display_url = node.get("display_url")
+    if display_url:
+        return ResolvedMedia(url=display_url, is_video=False)
+
+    return None
 
 
 async def _resolve_instagram_via_graphql(
     session: aiohttp.ClientSession, instagram_link: str
-) -> InstagramMedia:
-    shortcode, canonical_path = _extract_instagram_shortcode(instagram_link)
+) -> list[ResolvedMedia]:
+    shortcode, canonical_path, query_params = _extract_instagram_shortcode(instagram_link)
 
     variables = {
         "shortcode": shortcode,
@@ -199,10 +220,23 @@ async def _resolve_instagram_via_graphql(
         "hoisted_reply_id": "",
     }
 
-    headers = INSTAGRAM_HEADERS | {
+    cookies = session.cookie_jar.filter_cookies(URL("https://www.instagram.com/"))
+    csrf_cookie = cookies.get("csrftoken")
+    lsd_cookie = cookies.get("lsd")
+
+    graphql_headers = {
+        **INSTAGRAM_HEADERS,
+        "Accept": "*/*",
         "X-IG-App-ID": INSTAGRAM_GRAPHQL_APP_ID,
         "Referer": urlunparse(("https", "www.instagram.com", f"/{canonical_path}", "", "", "")),
+        "X-ASBD-ID": "129477",
+        "X-Requested-With": "XMLHttpRequest",
     }
+
+    if csrf_cookie:
+        graphql_headers["X-CSRFToken"] = csrf_cookie.value
+    if lsd_cookie:
+        graphql_headers["X-FB-LSD"] = lsd_cookie.value
 
     params = {
         "doc_id": INSTAGRAM_GRAPHQL_DOC_ID,
@@ -211,7 +245,7 @@ async def _resolve_instagram_via_graphql(
 
     try:
         async with session.get(
-            "https://www.instagram.com/graphql/query/", params=params, headers=headers
+            "https://www.instagram.com/graphql/query/", params=params, headers=graphql_headers
         ) as response:
             if response.status != 200:
                 raise RuntimeError(f"Instagram GraphQL returned HTTP {response.status}")
@@ -228,18 +262,44 @@ async def _resolve_instagram_via_graphql(
         raise RuntimeError("GraphQL response did not include media information")
 
     if media.get("is_video") and media.get("video_url"):
-        return InstagramMedia(url=media["video_url"], is_video=True)
+        return [ResolvedMedia(url=media["video_url"], is_video=True)]
+
+    if media.get("__typename") == "XDTGraphSidecar":
+        edges = media.get("edge_sidecar_to_children", {}).get("edges") or []
+        items: list[ResolvedMedia] = []
+        for edge in edges:
+            node = edge.get("node", {})
+            resolved = _media_from_graph_node(node)
+            if resolved:
+                items.append(resolved)
+        if items:
+            img_index = None
+            index_values = query_params.get("img_index") or query_params.get("img_index[]")
+            if index_values:
+                try:
+                    img_index = max(1, int(index_values[0]))
+                except (TypeError, ValueError):
+                    img_index = None
+
+            if img_index:
+                idx = img_index - 1
+                if 0 <= idx < len(items):
+                    return [items[idx]]
+
+            return items
 
     display_url = media.get("display_url")
     if display_url:
-        return InstagramMedia(url=display_url, is_video=False)
+        return [ResolvedMedia(url=display_url, is_video=False)]
 
     raise RuntimeError("GraphQL response missing media URLs")
 
 
-async def resolve_instagram_media(instagram_link: str) -> InstagramMedia:
+async def resolve_instagram_media(instagram_link: str) -> list[ResolvedMedia]:
     if not is_instagram_link(instagram_link):
         raise ValueError("⚠️ Invalid link source. Only instagram.com links are allowed.")
+
+    query_params = parse_qs(urlparse(instagram_link).query)
 
     async with aiohttp.ClientSession(headers=INSTAGRAM_HEADERS) as session:
         try:
@@ -251,10 +311,10 @@ async def resolve_instagram_media(instagram_link: str) -> InstagramMedia:
             raise RuntimeError(f"Failed to fetch Instagram page: {exc}") from exc
 
         soup = BeautifulSoup(html, "html.parser")
-        media = extract_instagram_media_from_meta(soup)
+        media_items = extract_instagram_media_from_meta(soup)
 
-        if media:
-            return media
+        if media_items and not (query_params.get("img_index") or query_params.get("img_index[]")):
+            return media_items
 
         return await _resolve_instagram_via_graphql(session, instagram_link)
 
@@ -309,15 +369,6 @@ async def deliver_media(
         await message.channel.send(f"Failed to deliver media: {exc}")
 
 
-async def resolve_media_url(url: str) -> str:
-    if is_ifunny_link(url):
-        return await resolve_ifunny_media_url(url)
-    if is_instagram_link(url):
-        media = await resolve_instagram_media(url)
-        return media.url
-    raise ValueError("Unsupported URL domain.")
-
-
 class MyClient(discord.Client):
     async def on_ready(self):
         print(f"{self.user} online")
@@ -350,17 +401,32 @@ class MyClient(discord.Client):
 
     async def _handle_instagram(self, message: discord.Message, instagram_link: str) -> None:
         try:
-            media = await resolve_instagram_media(instagram_link)
+            media_items = await resolve_instagram_media(instagram_link)
         except Exception as exc:
             await message.channel.send(f"Error processing the Instagram link: {exc}")
             return
 
-        await deliver_media(message, media.url, INSTAGRAM_HEADERS, is_video=media.is_video)
+        if not media_items:
+            await message.channel.send("Could not find media in the link.")
+            return
+
+        for item in media_items:
+            await deliver_media(message, item.url, INSTAGRAM_HEADERS, is_video=item.is_video)
 
 
 async def _run_cli(url: str) -> None:
-    resolved = await resolve_media_url(url)
-    print(format_slop(resolved))
+    if is_ifunny_link(url):
+        media_url = await resolve_ifunny_media_url(url)
+        print(format_slop(media_url))
+        return
+
+    if is_instagram_link(url):
+        items = await resolve_instagram_media(url)
+        for item in items:
+            print(format_slop(item.url))
+        return
+
+    raise SystemExit("Error: Unsupported URL domain.")
 
 
 def main():
