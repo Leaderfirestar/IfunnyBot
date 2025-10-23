@@ -278,6 +278,10 @@ def filename_from_url(url: str, is_video: bool | None = None) -> str:
     return name
 
 
+def format_slop(url: str) -> str:
+    return f"[slop]({url})"
+
+
 async def deliver_media(
     message: discord.Message, media_url: str, headers: dict[str, str], is_video: bool | None = None
 ) -> None:
@@ -290,13 +294,13 @@ async def deliver_media(
 
                 size_header = media_response.headers.get("Content-Length")
                 if size_header and int(size_header) > MAX_DISCORD_FILE_SIZE:
-                    await message.channel.send(media_url)
+                    await message.channel.send(format_slop(media_url))
                     return
 
                 media_bytes = await media_response.read()
 
         if len(media_bytes) > MAX_DISCORD_FILE_SIZE:
-            await message.channel.send(media_url)
+            await message.channel.send(format_slop(media_url))
             return
 
         filename = filename_from_url(media_url, is_video)
@@ -356,7 +360,7 @@ class MyClient(discord.Client):
 
 async def _run_cli(url: str) -> None:
     resolved = await resolve_media_url(url)
-    print(resolved)
+    print(format_slop(resolved))
 
 
 def main():
