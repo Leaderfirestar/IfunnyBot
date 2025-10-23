@@ -281,18 +281,15 @@ async def _resolve_instagram_via_graphql(
             if resolved:
                 items.append(resolved)
         if items:
-            img_index = None
             index_values = query_params.get("img_index") or query_params.get("img_index[]")
             if index_values:
                 try:
-                    img_index = max(1, int(index_values[0]))
+                    raw_index = int(index_values[0])
                 except (TypeError, ValueError):
-                    img_index = None
+                    raw_index = 1
 
-            if img_index:
-                idx = img_index - 1
-                if 0 <= idx < len(items):
-                    return [items[idx]]
+                idx = max(0, min(len(items) - 1, raw_index - 1))
+                return [items[idx]]
 
             return items
 
