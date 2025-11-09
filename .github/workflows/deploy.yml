@@ -1,61 +1,86 @@
 name: Deploy Flow
 
 on:
-  push:
-    branches:
-      - master
+    push:
+        branches:
+            - master
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    #   deploy:
+    #     runs-on: ubuntu-latest
 
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd IfunnyBot
+    #     steps:
+    #       - name: Deploy via SSH
+    #         uses: appleboy/ssh-action@v1.2.2
+    #         with:
+    #           host: ${{ secrets.SSH_HOST }}
+    #           username: ${{ secrets.SSH_USER }}
+    #           key: ${{ secrets.SSH_KEY }}
+    #           script: |
+    #             cd IfunnyBot
 
-            # Overwrite .env with the new token
-            echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+    #             # Overwrite .env with the new token
+    #             echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
 
-            # Pull the latest changes
-            git pull origin master
+    #             # Pull the latest changes
+    #             git pull origin master
 
-            # Install/update Python dependencies
-            rm -rf venv
-            /home/leaderfirestar/.pyenv/shims/python -m venv venv
-            source /home/leaderfirestar/IfunnyBot/venv/bin/activate
-            /home/leaderfirestar/IfunnyBot/venv/bin/pip install --upgrade pip
-            /home/leaderfirestar/IfunnyBot/venv/bin/pip install -r requirements.txt
+    #             # Install/update Python dependencies
+    #             rm -rf venv
+    #             /home/leaderfirestar/.pyenv/shims/python -m venv venv
+    #             source /home/leaderfirestar/IfunnyBot/venv/bin/activate
+    #             /home/leaderfirestar/IfunnyBot/venv/bin/pip install --upgrade pip
+    #             /home/leaderfirestar/IfunnyBot/venv/bin/pip install -r requirements.txt
 
-            # Start or reload using PM2 + config
-            /home/leaderfirestar/.nvm/versions/node/v22.16.0/bin/pm2 startOrReload ecosystem.config.json
+    #             # Start or reload using PM2 + config
+    #             /home/leaderfirestar/.nvm/versions/node/v22.16.0/bin/pm2 startOrReload ecosystem.config.json
 
-  release:
-    needs: deploy
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    release:
+        # needs: deploy
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch all history for semantic-release
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Fetch all history for semantic-release
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+            - name: Set up Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version: "24"
 
-      - name: Install semantic-release
-        run: pip install python-semantic-release
+            - name: Cache Node.js modules
+              id: cache-node-modules
+              uses: actions/cache@v4
+              with:
+                  path: node_modules
+                  key: node-modules-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      node-modules-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Run semantic-release
-        run: semantic-release publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install dependencies
+              if: steps.cache-node-modules.outputs.cache-hit != 'true'
+              run: npm ci
+
+            - name: Run semantic-release
+              id: semantic
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  # Run semantic-release and capture output
+                  OUTPUT=$(npx semantic-release || true)
+                  echo "$OUTPUT"
+
+                  # Extract the version line if a release occurred
+                  VERSION=$(echo "$OUTPUT" | grep -oP 'next release version is \K[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9\.-]+)?' || true)
+
+                  # If version found, mark release happened
+                  if [ -n "$VERSION" ]; then
+                      echo "released=true" >> $GITHUB_OUTPUT
+                      echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  else
+                      echo "released=false" >> $GITHUB_OUTPUT
+                  fi
