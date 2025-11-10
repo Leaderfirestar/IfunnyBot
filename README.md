@@ -56,7 +56,7 @@ npm install
 echo "TOKEN=your_discord_token" > .env
 
 # Run the bot
-python src/IfunnyBot/main.py
+python src/main.py
 ```
 
 ## 🛠️ How It Works

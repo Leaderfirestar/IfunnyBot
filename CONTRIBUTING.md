@@ -44,7 +44,7 @@ TOKEN=your_discord_token_here
 5. Run the bot
 
 ```bash
-python src/IfunnyBot/main.py
+python src/main.py
 ```
 
 ## 🧠 How to Contribute
