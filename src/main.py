@@ -3,6 +3,7 @@ import asyncio
 import os
 import sys
 import discord
+from dotenv import load_dotenv
 from client import MyClient
 
 async def _run_cli(client: MyClient, url: str) -> None:
@@ -15,6 +16,7 @@ async def _run_cli(client: MyClient, url: str) -> None:
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Ifunny/Instagram resolver bot/cli entry point")
     parser.add_argument("--url", help="Resolve a single supported link locally")
     args = parser.parse_args()
