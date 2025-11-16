@@ -2,7 +2,7 @@ import aiohttp
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
-from app_base import AppBase
+from apps.app_base import AppBase
 
 IFUNNY_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -31,7 +31,7 @@ class IFunnyApp(AppBase):
 			return "⚠️ Invalid link source. Only ifunny.co links are allowed."
 
 		try:
-			async with aiohttp.ClientSession(headers=IFUNNY_HEADERS) as session:
+			async with aiohttp.ClientSession(headers=self.headers) as session:
 				async with session.get(url) as response:
 					if response.status != 200:
 						raise RuntimeError(f"Failed to fetch meme page: {response.status}")

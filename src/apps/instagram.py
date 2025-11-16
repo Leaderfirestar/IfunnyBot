@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse, urlunparse
 from bs4 import BeautifulSoup
 from yarl import URL
-from app_base import AppBase
+from apps.app_base import AppBase
 
 INSTAGRAM_HEADERS = {
     "User-Agent": (
