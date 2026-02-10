@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import aiohttp
 import json
 import re
-from urllib.parse import urlparse
-from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse, urlunparse
 from bs4 import BeautifulSoup
 from yarl import URL
-from app_base import AppBase
+from app_base import AppBase, ResolvedMedia
 
 INSTAGRAM_HEADERS = {
     "User-Agent": (
@@ -15,6 +15,10 @@ INSTAGRAM_HEADERS = {
         "Chrome/123.0.0.0 Safari/537.36"
     ),
     "Accept-Language": "en-US,en;q=0.9",
+}
+
+CRAWLER_HEADERS = {
+    "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
 }
 
 class InstagramApp(AppBase):
@@ -70,9 +74,29 @@ class InstagramApp(AppBase):
 						lsd_token = match.group(1)
 						break
 
-				return await self._resolve_instagram_via_graphql(session, url, lsd_token)
+				try:
+					return await self._resolve_instagram_via_graphql(session, url, lsd_token)
+				except RuntimeError:
+					pass
+
+			# Fallback: re-fetch with a crawler UA to get OG tags for
+			# age-restricted or otherwise gated content.
+			return await self._resolve_via_crawler(url)
 		except Exception as exc:
 			return f"Error processing the Instagram link: {exc}"
+
+	async def _resolve_via_crawler(self, url: str) -> list[ResolvedMedia]:
+		async with aiohttp.ClientSession(headers=CRAWLER_HEADERS) as session:
+			async with session.get(url) as response:
+				if response.status != 200:
+					raise RuntimeError(f"Crawler fetch failed: {response.status}")
+				html = await response.text()
+
+		soup = BeautifulSoup(html, "html.parser")
+		media = self.extract_instagram_media_from_meta(soup)
+		if media:
+			return media
+		raise RuntimeError("Could not find media (content may require login)")
 
 		
 	def extract_instagram_media_from_meta(self, soup: BeautifulSoup) -> list[ResolvedMedia]:
@@ -211,8 +235,3 @@ class InstagramApp(AppBase):
 			return ResolvedMedia(url=display_url, is_video=False)
 
 		return None
-		
-@dataclass
-class ResolvedMedia:
-    url: str
-    is_video: bool | None = None

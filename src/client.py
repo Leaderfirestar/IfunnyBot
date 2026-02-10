@@ -1,11 +1,13 @@
 import discord
 from apps.ifunny import IFunnyApp
 from apps.instagram import InstagramApp
+from apps.twitter import TwitterApp
+from apps.tiktok import TikTokApp
 
 class MyClient(discord.Client):
     def __init__(self, intents):
         super().__init__(intents=intents)
-        self.apps = [IFunnyApp(), InstagramApp()]
+        self.apps = [IFunnyApp(), InstagramApp(), TwitterApp(), TikTokApp()]
 
     async def on_ready(self):
         print(f"{self.user} online")

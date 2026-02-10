@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import aiohttp
 from urllib.parse import urlparse
 
