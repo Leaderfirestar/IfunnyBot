@@ -4,7 +4,7 @@ import aiohttp
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
-from app_base import AppBase
+from .app_base import AppBase
 
 IFUNNY_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

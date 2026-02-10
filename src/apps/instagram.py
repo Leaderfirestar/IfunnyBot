@@ -6,7 +6,7 @@ import re
 from urllib.parse import parse_qs, urlparse, urlunparse
 from bs4 import BeautifulSoup
 from yarl import URL
-from app_base import AppBase, ResolvedMedia
+from .app_base import AppBase, ResolvedMedia
 
 INSTAGRAM_HEADERS = {
     "User-Agent": (

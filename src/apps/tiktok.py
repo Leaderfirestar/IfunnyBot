@@ -4,7 +4,7 @@ import aiohttp
 import re
 from urllib.parse import urlparse, quote
 
-from app_base import AppBase, ResolvedMedia
+from .app_base import AppBase, ResolvedMedia
 
 TIKTOK_HEADERS = {
 	"User-Agent": (

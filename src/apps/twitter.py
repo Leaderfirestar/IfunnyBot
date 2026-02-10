@@ -4,7 +4,7 @@ import aiohttp
 import re
 from urllib.parse import urlparse
 
-from app_base import AppBase, ResolvedMedia
+from .app_base import AppBase, ResolvedMedia
 
 TWITTER_HEADERS = {
 	"User-Agent": (
