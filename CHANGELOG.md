@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.1.0...v1.2.0) (2026-02-10)
+
+
+### Features
+
+* tiktok, twitter, insta changes ([6617275](https://github.com/Leaderfirestar/IfunnyBot/commit/6617275af9d1d16e049117e3a1f377b944a454c0))
+
 # [1.1.0](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.0.0...v1.1.0) (2025-11-10)
 
 
