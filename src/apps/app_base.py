@@ -127,14 +127,14 @@ class AppBase(ABC):
 
 					size_header = media_response.headers.get("Content-Length")
 					if size_header and int(size_header) > self.MAX_DISCORD_FILE_SIZE:
-						await message.channel.send(media_url)
+						await message.channel.send(f"[slop]({media_url})")
 						return
 
 					media_bytes = await media_response.read()
 					content_type = media_response.headers.get("Content-Type", "")
 
 			if len(media_bytes) > self.MAX_DISCORD_FILE_SIZE:
-				await message.channel.send(media_url)
+				await message.channel.send(f"[slop]({media_url})")
 				return
 
 			filename = self.filename_from_url(media_url, is_video)
