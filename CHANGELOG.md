@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.2.0...v1.2.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* **instagram:** rotate GraphQL doc_id to fix broken reel links ([82bdedb](https://github.com/Leaderfirestar/IfunnyBot/commit/82bdedb98729e14a3ca6872733b90551bb1a05ae))
+
 # [1.2.0](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.1.0...v1.2.0) (2026-02-10)
 
 
