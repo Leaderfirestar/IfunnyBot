@@ -25,7 +25,13 @@ class InstagramApp(AppBase):
 	def __init__(self):
 		super().__init__(INSTAGRAM_HEADERS)
 
-	INSTAGRAM_GRAPHQL_DOC_ID = "8845758582119845"
+	# Instagram rotates GraphQL doc_ids periodically. Stale ids return
+	# {"errors":[{"message":"execution error"}],"data":null}, so we try a
+	# list of known-good ids in order until one returns media.
+	INSTAGRAM_GRAPHQL_DOC_IDS = [
+		"10015901848480474",
+		"8845758582119845",
+	]
 	INSTAGRAM_GRAPHQL_APP_ID = "936619743392459"
 	LSD_PATTERNS = [
 		re.compile(r'"LSD",\[\],{"token":"([^"]+)'),
@@ -156,19 +162,33 @@ class InstagramApp(AppBase):
 			graphql_headers["X-FB-LSD"] = lsd_token
 
 		params = {
-			"doc_id": self.INSTAGRAM_GRAPHQL_DOC_ID,
 			"variables": json.dumps(variables, separators=(",", ":")),
 		}
 
-		try:
-			async with session.get(
-				"https://www.instagram.com/graphql/query/", params=params, headers=graphql_headers
-			) as response:
-				if response.status != 200:
-					raise RuntimeError(f"Instagram GraphQL returned HTTP {response.status}")
-				payload = await response.json(content_type=None)
-		except aiohttp.ClientError as exc:
-			raise RuntimeError(f"GraphQL request failed: {exc}") from exc
+		payload = None
+		last_error: Exception | None = None
+		for doc_id in self.INSTAGRAM_GRAPHQL_DOC_IDS:
+			request_params = {**params, "doc_id": doc_id}
+			try:
+				async with session.get(
+					"https://www.instagram.com/graphql/query/", params=request_params, headers=graphql_headers
+				) as response:
+					if response.status != 200:
+						last_error = RuntimeError(f"Instagram GraphQL returned HTTP {response.status}")
+						continue
+					candidate = await response.json(content_type=None)
+			except aiohttp.ClientError as exc:
+				last_error = RuntimeError(f"GraphQL request failed: {exc}")
+				continue
+
+			# Stale doc_ids return {"errors": [...], "data": null}.
+			if candidate and candidate.get("data") and candidate["data"].get("xdt_shortcode_media"):
+				payload = candidate
+				break
+			last_error = RuntimeError("GraphQL response did not include media (possibly stale doc_id)")
+
+		if payload is None:
+			raise last_error or RuntimeError("GraphQL request failed for all doc_ids")
 
 		try:
 			media = payload["data"]["xdt_shortcode_media"]
