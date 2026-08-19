@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import aiohttp
 import json
 import re
@@ -7,6 +8,11 @@ from urllib.parse import parse_qs, urlparse, urlunparse
 from bs4 import BeautifulSoup
 from yarl import URL
 from .app_base import AppBase, ResolvedMedia
+
+try:
+    import yt_dlp
+except ImportError:  # pragma: no cover - optional dependency
+    yt_dlp = None
 
 INSTAGRAM_HEADERS = {
     "User-Agent": (
@@ -58,6 +64,16 @@ class InstagramApp(AppBase):
 			raise ValueError("⚠️ Invalid link source. Only instagram.com links are allowed.")
 		try:
 			query_params = parse_qs(urlparse(url).query)
+
+			# Primary path: yt-dlp reliably resolves the real CDN video for
+			# reels/posts even when logged-out HTML/GraphQL is walled. Skip
+			# it for carousel index requests so those hit GraphQL below.
+			wants_index = bool(query_params.get("img_index") or query_params.get("img_index[]"))
+			if not wants_index:
+				video = await self._resolve_via_ytdlp(url)
+				if video:
+					return video
+
 			async with aiohttp.ClientSession(headers=INSTAGRAM_HEADERS) as session:
 				try:
 					async with session.get(url) as response:
@@ -103,6 +119,62 @@ class InstagramApp(AppBase):
 		if media:
 			return media
 		raise RuntimeError("Could not find media (content may require login)")
+
+	async def _resolve_via_ytdlp(self, url: str) -> list[ResolvedMedia] | None:
+		"""Use yt-dlp to pull the real CDN video URL. Returns None when the
+		post is not a video or yt-dlp is unavailable/errors out."""
+		if yt_dlp is None:
+			return None
+
+		def _extract() -> dict | None:
+			opts = {
+				"quiet": True,
+				"no_warnings": True,
+				"skip_download": True,
+				"noplaylist": False,
+			}
+			try:
+				with yt_dlp.YoutubeDL(opts) as ydl:
+					return ydl.extract_info(url, download=False)
+			except Exception:
+				return None
+
+		info = await asyncio.to_thread(_extract)
+		if not info:
+			return None
+
+		entries = info.get("entries")
+		if entries is not None:
+			items: list[ResolvedMedia] = []
+			for entry in entries:
+				resolved = self._ytdlp_entry_to_media(entry)
+				if resolved:
+					items.append(resolved)
+			return items or None
+
+		resolved = self._ytdlp_entry_to_media(info)
+		return [resolved] if resolved else None
+
+	def _ytdlp_entry_to_media(self, entry: dict | None) -> ResolvedMedia | None:
+		if not entry:
+			return None
+		if entry.get("vcodec") == "none":
+			return None
+		video_url = entry.get("url")
+		if not video_url and entry.get("formats"):
+			playable = [
+				f for f in entry["formats"]
+				if f.get("url") and f.get("vcodec") not in (None, "none")
+			]
+			if playable:
+				best = max(
+					playable,
+					key=lambda f: (f.get("height") or 0, f.get("tbr") or 0),
+				)
+				video_url = best.get("url")
+		if video_url:
+			return ResolvedMedia(url=video_url, is_video=True)
+		return None
 
 		
 	def extract_instagram_media_from_meta(self, soup: BeautifulSoup) -> list[ResolvedMedia]:

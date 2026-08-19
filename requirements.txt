@@ -18,3 +18,4 @@ soupsieve==2.7
 typing_extensions==4.14.1
 urllib3==2.5.0
 yarl==1.20.1
+yt-dlp>=2026.7.4
