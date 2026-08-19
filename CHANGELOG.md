@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.2.1...v1.2.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* **instagram:** resolve real CDN video via yt-dlp instead of screenshot ([f064b90](https://github.com/Leaderfirestar/IfunnyBot/commit/f064b9067fda47594e5bd856f08e2675dbfee313))
+
 ## [1.2.1](https://github.com/Leaderfirestar/IfunnyBot/compare/v1.2.0...v1.2.1) (2026-07-11)
 
 
